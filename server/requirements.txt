@@ -1,0 +1,8 @@
+Flask
+flask-jwt-extended
+flask-cors
+mongoengine
+python-dotenv
+slack_sdk
+boto3
+requests
