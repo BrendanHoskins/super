@@ -1,10 +1,11 @@
+from .slack_bp import slack_bp
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 from flask import request, redirect, jsonify
 from models.user.user import User
-from models.user.slack_integration import SlackIntegration, SlackOauth
+from models.user.slack_integration import SlackIntegration
 from services.slack.slack_oauth_services import (
     get_slack_oauth_url,
     slack_oauth_callback,
@@ -12,13 +13,9 @@ from services.slack.slack_oauth_services import (
 )
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from datetime import datetime
-from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from slack_sdk.signature import SignatureVerifier
 import os
-from .slack_bp import slack_bp
-# Initialize the SignatureVerifier with your Slack signing secret
-signature_verifier = SignatureVerifier(os.environ["SLACK_SIGNING_SECRET"])
+from threading import Thread
 
 # Load environment variables
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -49,7 +46,7 @@ def slack_oauth_callback_route():
     error = request.args.get("error")
 
     if error:
-        return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?error={error}")
+        return redirect(f"{FRONTEND_URL}/integrations?error={error}")
 
     if state:
         # Find the user with this state
@@ -69,20 +66,20 @@ def slack_oauth_callback_route():
                     user.thirdPartyIntegrations['slack'] = slack_integration
                     user.save()
 
-                    # Redirect to frontend with success
-                    return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?success=true")
+                    # Redirect to IntegrationsPage with success
+                    return redirect(f"{FRONTEND_URL}/integrations?success=true&message=Slack integration successful")
                 else:
                     error_message = installation.get('error', 'Unknown error')
-                    return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?error={error_message}")
+                    return redirect(f"{FRONTEND_URL}/integrations?error={error_message}")
             else:
                 # State is expired
-                return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?error=State expired")
+                return redirect(f"{FRONTEND_URL}/integrations?error=State expired")
         else:
             # State not found
-            return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?error=Invalid state")
+            return redirect(f"{FRONTEND_URL}/integrations?error=Invalid state")
     else:
         # State not provided in callback
-        return redirect(f"{FRONTEND_URL}/integrations/slack-oauth-callback?error=State missing")
+        return redirect(f"{FRONTEND_URL}/integrations?error=State missing")
 
 @slack_bp.route('/oauth/uninstall', methods=['POST'])
 @jwt_required()
@@ -92,7 +89,8 @@ def slack_uninstall_route():
     """
     user_id = get_jwt_identity()
 
-    if uninstall_slack(user_id):
-        return jsonify({"message": "Slack integration disconnected successfully"}), 200
-    else:
-        return jsonify({"error": "No Slack integration found for this user"}), 404
+    # Start uninstall_slack in a background thread
+    Thread(target=uninstall_slack, args=(user_id,)).start()
+
+    # Return immediately to the frontend
+    return jsonify({"message": "Slack integration uninstall process initiated"}), 202

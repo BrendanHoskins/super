@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import SlackDefaultEmojiPicker from './SlackDefaultEmojiPicker';
-import SlackTeam from './SlackTeam';
+import { Box, Typography, Button, Snackbar, Alert, Paper, CircularProgress } from '@mui/material';
+import InfoIcon from '@mui/icons-material/Info';
+import SlackDefaultEmojiPicker from './SlackTabContentEmojiPicker';
+import SlackTeam from './SlackTabContentTeamMemberSelection';
+import SlackConfiguration from './SlackTabContentSelectedConfiguration';
 import API from '../../../api/api';
 
 function SlackTabContent() {
   const [selectedEmojis, setSelectedEmojis] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
-  const [submitStatus, setSubmitStatus] = useState(null);
 
   const [usersByGroup, setUsersByGroup] = useState({});
   const [slackDefaultEmojis, setSlackDefaultEmojis] = useState(null);
@@ -15,11 +17,19 @@ function SlackTabContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [configExists, setConfigExists] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+  const [initialConfig, setInitialConfig] = useState({ emojis: [], members: [] });
 
   useEffect(() => {
     const fetchSlackDataAndConfiguration = async () => {
+      setLoading(true);
       try {
-        const response = await API.get('/slack/usage/get-slack-data-and-configuration');
+        const response = await API.get('slack/usage/get-slack-data-and-configuration');
         const data = response.data;
 
         // Set users data
@@ -50,7 +60,7 @@ function SlackTabContent() {
             .filter((user) => user !== undefined);
           setSelectedMembers(configuredMembers);
 
-          // Set selected emojis
+          // Build emoji dictionary for easy lookup
           const emojiDict = {};
 
           // Combine default emojis into emojiDict
@@ -96,7 +106,7 @@ function SlackTabContent() {
             });
           }
 
-          // Map configured emojis
+          // Map configured emojis and ensure 'shortcodes' are properly set
           const configuredEmojis = config.slack_emoji_configuration.map((emojiConfig) => {
             // Ensure 'shortcodes' is an array
             const shortcodesArray = ensureArray(emojiConfig.shortcodes);
@@ -121,13 +131,21 @@ function SlackTabContent() {
             if (emoji) {
               // Ensure 'src' is set, prioritize emojiConfig.src
               const src = emojiConfig.src || emoji.src || emoji.imageUrl;
-              return { ...emoji, src };
+
+              // Combine shortcodes from emoji and emojiConfig
+              const emojiShortcodes = ensureArray(emoji.shortcodes);
+              const emojiConfigShortcodes = shortcodesArray;
+              const combinedShortcodes = [...new Set([...emojiShortcodes, ...emojiConfigShortcodes])];
+
+              // Return processed emoji
+              return { ...emoji, src, shortcodes: combinedShortcodes };
             } else if (emojiConfig.src) {
               // Use the 'src' data from the configuration
               return {
                 id: emojiConfig.id || 'unknown',
                 name: emojiConfig.name || 'Unknown Emoji',
                 src: emojiConfig.src,
+                shortcodes: shortcodesArray,
               };
             } else {
               // Placeholder for unknown emojis
@@ -135,14 +153,29 @@ function SlackTabContent() {
                 id: emojiConfig.id || 'unknown',
                 name: emojiConfig.name || 'Unknown Emoji',
                 src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAACqG8...',
+                shortcodes: shortcodesArray,
               };
             }
           });
 
-          setSelectedEmojis(configuredEmojis);
+          // Ensure all configured emojis have 'shortcodes' properly set
+          const processedConfiguredEmojis = configuredEmojis.map((emoji) => ({
+            ...emoji,
+            shortcodes: ensureArray(emoji.shortcodes),
+          }));
+
+          setSelectedEmojis(processedConfiguredEmojis);
+
+          // Store the initial configuration
+          setInitialConfig({
+            emojis: processedConfiguredEmojis,
+            members: configuredMembers,
+          });
         }
       } catch (error) {
         console.error('Error fetching Slack data and configuration:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -178,42 +211,59 @@ function SlackTabContent() {
     });
   };
 
+  // Function to remove an emoji from selectedEmojis
+  const handleEmojiRemove = (emojiId) => {
+    setSelectedEmojis((prevEmojis) =>
+      prevEmojis.filter((emoji) => emoji.id !== emojiId)
+    );
+  };
+
+  // Function to remove a member from selectedMembers
+  const handleMemberRemove = (memberId) => {
+    setSelectedMembers((prevMembers) =>
+      prevMembers.filter((member) => member.id !== memberId)
+    );
+  };
+
   const handleSubmit = async () => {
     try {
-      await API.post('/slack/usage/submit-slack-configuration', {
-        emojis: selectedEmojis,
+      // Ensure all emojis have 'shortcodes' properly set before submitting
+      const processedEmojis = selectedEmojis.map((emoji) => ({
+        ...emoji,
+        shortcodes: ensureArray(emoji.shortcodes),
+      }));
+
+      await API.post('slack/usage/submit-slack-configuration', {
+        emojis: processedEmojis,
         members: selectedMembers,
       });
-      setSubmitStatus('success');
       setConfigExists(true);
+      setSnackbar({
+        open: true,
+        message: 'Configuration submitted successfully!',
+        severity: 'success',
+      });
+
+      // Update the initialConfig state with the new configuration
+      setInitialConfig({
+        emojis: processedEmojis,
+        members: selectedMembers,
+      });
     } catch (error) {
       console.error('Error submitting configuration:', error);
-      setSubmitStatus('error');
+      setSnackbar({
+        open: true,
+        message: 'Error submitting configuration. Please try again.',
+        severity: 'error',
+      });
     }
   };
 
-  // Function to render selected emoji previews
-  const renderEmojiPreviews = () => {
-    return (
-      <div className="selected-emojis">
-        <h3>Selected Emojis:</h3>
-        {selectedEmojis.length === 0 ? (
-          <p>No emojis selected.</p>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            {selectedEmojis.map((emoji, index) => (
-              <div key={index} style={{ margin: '5px', textAlign: 'center' }}>
-                {emoji.src ? (
-                  <img src={emoji.src} alt={emoji.name} style={{ width: '32px', height: '32px' }} />
-                ) : (
-                  <span style={{ fontSize: '32px' }}>❓</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleSearch = (event) => {
@@ -224,12 +274,10 @@ function SlackTabContent() {
     setActiveTab(tabName);
   };
 
-  // Handle selected members from SlackTeam
   const handleMemberSelect = (selectedUsers) => {
     setSelectedMembers(selectedUsers);
   };
 
-  // Helper function to ensure a value is an array
   const ensureArray = (value) => {
     if (Array.isArray(value)) {
       return value;
@@ -242,83 +290,117 @@ function SlackTabContent() {
     }
   };
 
+  // Function to check if the current configuration is different from the initial one
+  const isConfigChanged = () => {
+    if (selectedEmojis.length !== initialConfig.emojis.length || 
+        selectedMembers.length !== initialConfig.members.length) {
+      return true;
+    }
+
+    const emojiIdsMatch = selectedEmojis.every(emoji => 
+      initialConfig.emojis.some(initialEmoji => initialEmoji.id === emoji.id)
+    );
+    const memberIdsMatch = selectedMembers.every(member => 
+      initialConfig.members.some(initialMember => initialMember.id === member.id)
+    );
+
+    return !emojiIdsMatch || !memberIdsMatch;
+  };
+
+  const isUpdateDisabled = () => {
+    return (
+      selectedEmojis.length === 0 ||
+      selectedMembers.length === 0 ||
+      (configExists && !isConfigChanged())
+    );
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        sx={{
+          height: '550px', // Adjust this value to match the approximate height of your tab content
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <div className="slack-tab-content" style={{ display: 'flex', flexDirection: 'column' }}>
-      {configExists ? (
-        <div
-          style={{
-            backgroundColor: '#e6f7ff',
-            padding: '10px',
-            marginBottom: '20px',
-            borderRadius: '5px',
-          }}
-        >
-          <p>Existing configuration loaded. You can modify and resubmit if needed.</p>
-        </div>
-      ) : (
-        <div
-          style={{
-            backgroundColor: '#ffe6e6',
-            padding: '10px',
-            marginBottom: '20px',
-            borderRadius: '5px',
-          }}
-        >
-          <p>No existing configuration found. Please select emojis and team members to configure.</p>
-        </div>
-      )}
+    <Box display="flex" flexDirection="column" sx={{ height: '100%' }}>
+      <Paper elevation={2} sx={{ mb: 3, p: 2, backgroundColor: 'white' }}>
+        <Box display="flex" alignItems="center">
+          <InfoIcon color="primary" sx={{ mr: 2 }} />
+          <Typography variant="body1">
+            Super will pull a Slack message when a selected user tags a message with a selected emoji. (Note: only applies to channels and conversations you are a part of)
+          </Typography>
+        </Box>
+      </Paper>
+
       {/* Content */}
-      <div style={{ display: 'flex' }}>
+      <Box display="flex" flex="1" sx={{ height: '100%' }}>
         {/* Left side: Emoji Picker */}
-        <div style={{ width: '50%' }}>
-          <h2>Select Emojis</h2>
-          <p>Choose emojis to tag messages for syncing with XProd</p>
-          <SlackDefaultEmojiPicker
-            onEmojiSelect={handleEmojiSelect}
-            slackDefaultEmojis={slackDefaultEmojis}
-            slackCustomEmojis={slackCustomEmojis}
-          />
-          {renderEmojiPreviews()}
-        </div>
+        <Box flex="1" display="flex" flexDirection="column" mr={2}>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <SlackDefaultEmojiPicker
+              onEmojiSelect={handleEmojiSelect}
+              slackDefaultEmojis={slackDefaultEmojis}
+              slackCustomEmojis={slackCustomEmojis}
+            />
+          </Box>
+        </Box>
         {/* Right side: Slack Team Members */}
-        <div style={{ width: '50%', marginLeft: '20px' }}>
-          <h2>Select Team Members</h2>
-          <SlackTeam
-            usersByGroup={usersByGroup}
-            searchTerm={searchTerm}
-            activeTab={activeTab}
-            onSearch={handleSearch}
-            onTabClick={handleTabClick}
-            onMemberSelect={handleMemberSelect}
-            initialSelectedMembers={selectedMembers}
-          />
-        </div>
-      </div>
+        <Box flex="1" display="flex" flexDirection="column" ml={2}>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <SlackTeam
+              usersByGroup={usersByGroup}
+              searchTerm={searchTerm}
+              activeTab={activeTab}
+              onSearch={handleSearch}
+              onTabClick={handleTabClick}
+              onMemberSelect={handleMemberSelect}
+              initialSelectedMembers={selectedMembers}
+            />
+          </Box>
+        </Box>
+      </Box>
+      {/* Configuration */}
+      <Box mt={2}>
+        <SlackConfiguration
+          selectedEmojis={selectedEmojis}
+          selectedMembers={selectedMembers}
+          handleEmojiRemove={handleEmojiRemove}
+          handleMemberRemove={handleMemberRemove} // Pass the new function
+        />
+      </Box>
       {/* Submit Button */}
-      <div style={{ width: '100%', marginTop: '20px' }}>
-        <button
+      <Box mt={2} display="flex" justifyContent="center">
+        <Button
+          variant="contained"
+          color="primary"
           onClick={handleSubmit}
-          disabled={selectedEmojis.length === 0 && selectedMembers.length === 0}
-          style={{
-            padding: '10px 20px',
-            fontSize: '16px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-          }}
+          disabled={isUpdateDisabled()}
         >
           {configExists ? 'Update Configuration' : 'Submit Configuration'}
-        </button>
-        {submitStatus === 'success' && (
-          <p style={{ color: 'green' }}>Configuration submitted successfully!</p>
-        )}
-        {submitStatus === 'error' && (
-          <p style={{ color: 'red' }}>Error submitting configuration. Please try again.</p>
-        )}
-      </div>
-    </div>
+        </Button>
+      </Box>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 

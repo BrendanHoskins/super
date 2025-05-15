@@ -6,8 +6,7 @@ from mongoengine import (
     BooleanField,
     IntField,
     EmbeddedDocumentField,
-    EmbeddedDocument,
-    # ObjectIdField  # Not needed if not adding user_id field
+    EmbeddedDocument
 )
 # from bson import ObjectId
 from datetime import datetime
@@ -65,6 +64,19 @@ class SlackMessage(BaseMessage):
     team_id = StringField()
     metadata = DictField()
 
+    # New sender fields
+    sender_id = StringField()
+    sender_name = StringField()
+    sender_real_name = StringField()
+    sender_display_name = StringField()
+    sender_email = StringField()
+    sender_title = StringField()
+    sender_phone = StringField()
+    sender_is_admin = BooleanField()
+    sender_is_owner = BooleanField()
+    sender_is_bot = BooleanField()
+    sender_timezone = StringField()
+
     meta = {
         'collection': 'slack_messages',
         'indexes': [
@@ -78,7 +90,7 @@ class SlackMessage(BaseMessage):
         'ordering': ['-ts']
     }
 
-    def populate_from_slack_message(self, message_data):
+    def populate_from_slack_message(self, message_data, message_sender=None):
         self.type = message_data.get('type')
         self.subtype = message_data.get('subtype')
         self.ts = message_data.get('ts')
@@ -87,6 +99,20 @@ class SlackMessage(BaseMessage):
         self.team = message_data.get('team')
         self.event_ts = message_data.get('event_ts')
         self.channel = message_data.get('channel')
+
+        # Message sender fields
+        if message_sender:
+            self.sender_id = message_sender.get('id')
+            self.sender_name = message_sender.get('name')
+            self.sender_real_name = message_sender.get('real_name')
+            self.sender_display_name = message_sender.get('display_name')
+            self.sender_email = message_sender.get('email')
+            self.sender_title = message_sender.get('title')
+            self.sender_phone = message_sender.get('phone')
+            self.sender_is_admin = message_sender.get('is_admin')
+            self.sender_is_owner = message_sender.get('is_owner')
+            self.sender_is_bot = message_sender.get('is_bot')
+            self.sender_timezone = message_sender.get('timezone')
 
         # Thread-related fields
         self.thread_ts = message_data.get('thread_ts')
@@ -128,3 +154,11 @@ class SlackMessage(BaseMessage):
         self.updated_at = datetime.utcnow()
         if not self.created_at:
             self.created_at = datetime.utcnow()
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "user": self.sender_real_name,
+            "content": self.text,
+            "timestamp": self.ts,
+        }

@@ -22,7 +22,7 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       await login(username, password);
-      navigate('/dashboard');
+      navigate('/messages');
     } catch (err) {
       setError(
         err.response ? err.response.data.message : 'Login failed'

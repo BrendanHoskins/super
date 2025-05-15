@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Typography, Button } from "@mui/material";
 import { styled } from "@mui/system";
-import API from "../../../api/api";
+import API from "../../api/api";
 
 const SlackIcon = styled("img")({
   width: 40,
@@ -54,7 +54,7 @@ const SlackBox = ({ enabled, onDisconnect, workspaceName }) => {
         <Typography variant="body2" color="text.secondary" paragraph>
           {enabled
             ? `Your workspace is connected to ${workspaceName}.`
-            : "Integrate your workspace with Slack for seamless communication."}
+            : "Integrate your workspace with Slack to align with stakeholders."}
         </Typography>
         <Button
           variant="contained"

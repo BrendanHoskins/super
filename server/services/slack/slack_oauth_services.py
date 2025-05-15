@@ -12,10 +12,8 @@ from datetime import datetime, timedelta
 import uuid
 from models.user.user import User
 from threading import Lock
-import boto3
 from bson import ObjectId
 from models.slack.slack_message import SlackMessage
-from mongoengine.queryset.visitor import Q
 
 refresh_lock = Lock()
 user_refresh_lock = Lock()
@@ -68,7 +66,6 @@ def slack_oauth_callback(code):
                 redirect_uri=SLACK_REDIRECT_URI,
                 code=code
             )
-            print(oauth_response)
             installed_enterprise = oauth_response.get("enterprise") or {}
             is_enterprise_install = oauth_response.get("is_enterprise_install")
             installed_team = oauth_response.get("team") or {}
@@ -79,7 +76,6 @@ def slack_oauth_callback(code):
             if bot_token is not None:
                 auth_test = client.auth_test(token=bot_token)
                 bot_id = auth_test["bot_id"]
-                print(auth_test)
                 if is_enterprise_install is True:
                     enterprise_url = auth_test.get("url")
             # Calculate the expiration datetime
@@ -175,7 +171,7 @@ def get_bot_refresh_token(user_id):
 
 def uninstall_slack(user_id):
     """
-    Disconnect Slack integration for the user and remove associated files efficiently.
+    Disconnect Slack integration for the user, revoke OAuth token, and remove associated files efficiently.
     """
     user_object_id = ObjectId(user_id)
 
@@ -183,6 +179,18 @@ def uninstall_slack(user_id):
     if not user or 'slack' not in user.thirdPartyIntegrations:
         return False
 
+    # Revoke the Slack OAuth token
+    slack_integration = user.thirdPartyIntegrations['slack']
+    if slack_integration.installation:
+        slack_token = slack_integration.installation.user_token
+        if slack_token:
+            try:
+                client = WebClient(token=slack_token)
+                client.auth_revoke()
+            except SlackApiError as e:
+                print(f"Error revoking Slack token: {e}")
+
+    # Rest of the function remains the same
     update_result = User.objects(pk=user_object_id).update_one(
         __raw__={
             '$unset': {'thirdPartyIntegrations.slack': 1}
@@ -192,29 +200,15 @@ def uninstall_slack(user_id):
     if update_result == 0:
         return False
 
-    slack_message_ids = SlackMessage.objects(
-        Q(relevant_user_id=user_object_id) & Q(source='slack_integration')
-    ).scalar('id')
+    # Delete all Slack messages for the user in a single operation
+    result = SlackMessage.objects(
+        relevant_user_id=user_object_id,
+        source='slack_integration'
+    ).delete()
 
-    if slack_message_ids:
-        SlackMessage.objects(id__in=slack_message_ids).delete()
-
-        s3_client = boto3.client('s3')
-        bucket_name = os.getenv('FILES_TO_EXTRACT_INSIGHTS_FROM_S3_BUCKET_NAME')
-
-        s3_keys = [
-            f"every_user_uploaded_file_converted_to_txt/{message_id}"
-            for message_id in slack_message_ids
-        ]
-
-        try:
-            for i in range(0, len(s3_keys), 1000):
-                s3_client.delete_objects(
-                    Bucket=bucket_name,
-                    Delete={'Objects': [{'Key': key} for key in s3_keys[i:i+1000]]}
-                )
-        except Exception as e:
-            print(f"Error deleting S3 objects: {str(e)}")
+    # Optionally, you can log the number of deleted messages
+    if result:
+        print(f"Deleted {result} Slack messages for user {user_object_id}")
 
     return True
 
@@ -247,7 +241,6 @@ def get_user_refresh_token(user_id):
                     grant_type="refresh_token",
                     refresh_token=installation.user_refresh_token
                 )
-                
                 # Update the installation document with new token information
                 installation.user_token = refresh_response["access_token"]
                 installation.user_refresh_token = refresh_response["refresh_token"]

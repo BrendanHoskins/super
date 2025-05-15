@@ -1,19 +1,19 @@
 import React from 'react';
 import Picker from '@emoji-mart/react';
+import { Box, Typography } from '@mui/material';
 
 function SlackDefaultEmojiPicker({ onEmojiSelect, slackDefaultEmojis, slackCustomEmojis }) {
   const handleEmojiSelect = (emoji) => {
-    console.log(emoji);
     onEmojiSelect(emoji);
   };
 
   if (!slackDefaultEmojis || !slackCustomEmojis) {
     // Show a loading indicator or placeholder
-    return <div>Loading emojis...</div>;
+    return <Typography>Loading emojis...</Typography>;
   }
 
   return (
-    <div className="slack-default-emoji-picker">
+    <Box className="slack-default-emoji-picker">
       <Picker
         data={slackDefaultEmojis}
         onEmojiSelect={handleEmojiSelect}
@@ -24,7 +24,7 @@ function SlackDefaultEmojiPicker({ onEmojiSelect, slackDefaultEmojis, slackCusto
           }
         }}
       />
-    </div>
+    </Box>
   );
 }
 

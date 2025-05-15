@@ -77,7 +77,7 @@ class SlackEmojiConfiguration(EmbeddedDocument):
     keywords = ListField(StringField())
     name = StringField()
     native = StringField()
-    shortcodes = ListField()
+    shortcodes = ListField(StringField())
     src = StringField()
     unified = StringField()
     aliases = ListField(StringField())

@@ -14,6 +14,7 @@ from models.user.user import User
 from api.slack.slack_bp import slack_bp
 from api.auth_routes import auth_bp
 from api.integrations_routes import integrations_routes
+from api.messages_routes import messages_bp
 
 # Load environment variables
 MONGO_URI = os.getenv('MONGO_URI')
@@ -56,6 +57,7 @@ logging.getLogger('flask_mongoengine').setLevel(logging.WARNING)
 app.register_blueprint(slack_bp, url_prefix='/api/slack')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(integrations_routes, url_prefix='/api/integrations')
+app.register_blueprint(messages_bp, url_prefix='/api/messages')
 
 # Error Handling
 @app.errorhandler(404)

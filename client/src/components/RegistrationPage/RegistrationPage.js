@@ -24,7 +24,7 @@ const RegistrationPage = () => {
     try {
       await API.post("/auth/register", { username, password });
       await login(username, password);
-      navigate('/dashboard');
+      navigate('/messages');
     } catch (err) {
       setError(
         err.response ? err.response.data.message : "Registration failed"

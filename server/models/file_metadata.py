@@ -60,6 +60,3 @@ class FileMetadata(Document):
             "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
-
-def get_current_time():
-    return datetime.now()

@@ -4,7 +4,7 @@ import { getAccessToken } from '../services/AuthService';
 
 const PublicRoute = () => {
   const isAuthenticated = !!getAccessToken();
-  return !isAuthenticated ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return !isAuthenticated ? <Outlet /> : <Navigate to="/messages" replace />;
 };
 
 export default PublicRoute;

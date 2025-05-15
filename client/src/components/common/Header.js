@@ -10,8 +10,7 @@ function Header() {
   const navigate = useNavigate();
 
   const menuItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Products', path: '/products' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Integrations', path: '/integrations' }
   ];
 
@@ -48,6 +47,7 @@ function Header() {
               color="inherit"
               component={RouterLink}
               to={item.path}
+              sx={{ mx: 1.5 }}
             >
               {item.label}
             </Button>
