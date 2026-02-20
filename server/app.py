@@ -30,7 +30,11 @@ app.config['JWT_ACCESS_COOKIE_NAME'] = 'access_token_cookie'
 app.config['JWT_REFRESH_COOKIE_NAME'] = 'refresh_token_cookie'
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # For simplicity; consider enabling in production
 app.config['JWT_COOKIE_SECURE'] = False  # True in production with HTTPS
-app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)  # 30-day refresh token expiration
+app.config['JWT_COOKIE_SAMESITE'] = 'Lax'  # So refresh cookie is sent when frontend (e.g. :3000) calls backend (:5000)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=90)  # Gmail-style: stay logged in across browser closes
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # 24h so leaving tab open and returning doesn't require refresh
+app.config['JWT_SESSION_COOKIE'] = False  # Persist refresh cookie with max_age so it survives tab/background and isn't lost
+app.config['JWT_REFRESH_COOKIE_PATH'] = '/'  # Ensure refresh cookie is sent for all backend paths
 
 # Initialize MongoDB connection using mongoengine
 connect(
@@ -86,8 +90,11 @@ def check_if_token_revoked(jwt_header, jwt_payload):
     return jti in jwt_blocklist
 
 if __name__ == '__main__':
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    port = int(os.getenv('PORT', 5000))
+
     app.run(
-        debug=True,
-        host='{BACKEND_URL}',
-        port=5000
+        debug=debug_mode,
+        host='0.0.0.0',
+        port=port,
     )

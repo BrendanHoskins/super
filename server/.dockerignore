@@ -1,0 +1,23 @@
+# Env and local config (use .env.example only as reference; real .env passed via compose)
+.env
+.env.*
+!.env.example
+
+# Python
+.venv
+venv
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache
+.coverage
+htmlcov
+
+# IDE / OS
+.idea
+.vscode
+.git
+*.md

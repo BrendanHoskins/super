@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: super-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: super
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+
+  server:
+    build:
+      context: ./server
+    container_name: super-server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_PROJECT_NAME: super
+      BACKEND_URL: http://localhost:${BACKEND_PORT:-5000}
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT:-3000}
+      FLASK_DEBUG: "False"
+      PORT: 5000
+    depends_on:
+      - mongo
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+
+  client:
+    build:
+      context: ./client
+    container_name: super-client
+    restart: unless-stopped
+    env_file:
+      - ./client/.env
+    environment:
+      REACT_APP_BACKEND_URL: http://localhost:${BACKEND_PORT:-5000}/api
+      PORT: 3000
+    depends_on:
+      - server
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+volumes:
+  mongo-data:
+

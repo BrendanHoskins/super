@@ -172,26 +172,59 @@ super/
 
 ### Environment Variables
 
-Create a `.env` file in the `server/` directory:
+Create env files from the provided examples and fill in your Slack details:
 
-```env
-MONGO_URI=mongodb://localhost:27017
-MONGO_PROJECT_NAME=super
-JWT_SECRET_KEY=your-secret-key-here
-FRONTEND_URL=http://localhost:3000
-BACKEND_URL=http://localhost:5000
-SLACK_CLIENT_ID=your-slack-client-id
-SLACK_CLIENT_SECRET=your-slack-client-secret
-SLACK_SIGNING_SECRET=your-slack-signing-secret
+- Copy `server/.env.example` to `server/.env` and update the Slack and JWT values.
+- Copy `client/.env.example` to `client/.env` if you want to override the default backend URL.
+
+```bash
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 ```
 
-Create a `.env` file in the `client/` directory:
+### Running with Docker (recommended)
 
-```env
-REACT_APP_BACKEND_URL=http://localhost:5000
+Once your `.env` files are populated:
+
+```bash
+make docker-super
 ```
 
-### Installation
+This will:
+
+- Start a local MongoDB instance in Docker.
+- **Auto-select the first open ports** for the backend (default 5000) and frontend (default 3000). If 5000 or 3000 are in use, it will try 5001, 5002, … and 3001, 3002, … and print the URLs when it starts.
+- Build and run the Flask backend and React frontend.
+
+You can also run it detached:
+
+```bash
+make docker-super-detach
+```
+
+#### Ports: override or troubleshoot
+
+To force specific ports instead of auto-selecting:
+
+```bash
+BACKEND_PORT=5001 FRONTEND_PORT=3001 make docker-super
+```
+
+**View what’s using a port (macOS/Linux):**
+
+```bash
+lsof -i :5000
+```
+
+**Kill the process using a port:**
+
+```bash
+kill -9 $(lsof -ti :5000)
+```
+
+Replace `5000` with the port you care about. Use `sudo` if the process is owned by another user.
+
+### Manual Installation (without Docker)
 
 #### Backend
 

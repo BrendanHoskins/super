@@ -30,8 +30,13 @@ export const login = async (username, password) => {
   }
 };
 
-// Update the refreshAccessToken function
-export const refreshAccessToken = async () => {
+/**
+ * Get a new access token using the refresh cookie.
+ * @param {Object} options
+ * @param {boolean} options.redirectOnFailure - If true (default), redirect to /login on failure. If false, caller handles (e.g. PrivateRoute).
+ */
+export const refreshAccessToken = async (options = {}) => {
+  const { redirectOnFailure = true } = options;
   try {
     const response = await API.post('/auth/refresh', {}, {
       withCredentials: true
@@ -42,8 +47,9 @@ export const refreshAccessToken = async () => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     clearAccessToken();
-    // Redirect to login page or handle authentication failure
-    window.location.href = '/login';
+    if (redirectOnFailure) {
+      window.location.href = '/login';
+    }
     throw error;
   }
 };
@@ -60,15 +66,13 @@ export const logout = async () => {
   }
 };
 
+/** Restore session from refresh cookie when there's no access token (e.g. after closing tab). Does not redirect on failure. */
 export const initializeAuth = async () => {
   const token = getAccessToken();
   if (!token) {
     try {
-      const newToken = await refreshAccessToken();
-      return newToken;
+      return await refreshAccessToken({ redirectOnFailure: false });
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
-      await logout();
       return null;
     }
   }
