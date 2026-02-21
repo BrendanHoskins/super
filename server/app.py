@@ -14,6 +14,10 @@ from mongoengine import connect
 from bson.objectid import ObjectId
 from datetime import datetime, timezone, timedelta
 import logging
+import warnings
+
+# Mongoengine warns when a subclass sets 'collection'; harmless here.
+warnings.filterwarnings('ignore', message='.*Trying to set a collection on a subclass.*', module='mongoengine.*')
 
 from models.user.user import User
 from api.slack.slack_bp import slack_bp
@@ -27,6 +31,8 @@ MONGO_PROJECT_NAME = os.getenv('MONGO_PROJECT_NAME', 'super')
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:5000')
+if BACKEND_URL:
+    print("Backend URL (from your machine):", BACKEND_URL)
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY  # Set the secret key from .env
@@ -57,9 +63,10 @@ CORS(app, supports_credentials=True, origins=[FRONTEND_URL] if FRONTEND_URL else
 jwt_blocklist = set()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to INFO
+logging.basicConfig(level=logging.INFO)
 
-# Disable MongoDB logging
+# Only show errors/warnings, not every request line
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('mongoengine').setLevel(logging.WARNING)
 logging.getLogger('flask_mongoengine').setLevel(logging.WARNING)
 
@@ -98,7 +105,6 @@ def check_if_token_revoked(jwt_header, jwt_payload):
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
-
     app.run(
         debug=debug_mode,
         host='0.0.0.0',
