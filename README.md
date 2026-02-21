@@ -192,9 +192,8 @@ make docker-super
 
 This will:
 
-- Start a local MongoDB instance in Docker.
-- **Auto-select the first open ports** for the backend (default 5000) and frontend (default 3000). If 5000 or 3000 are in use, it will try 5001, 5002, … and 3001, 3002, … and print the URLs when it starts.
-- Build and run the Flask backend and React frontend.
+- **Scan for open ports** for the backend (from 5000) and frontend (from 3000), then start MongoDB, Flask backend, and Vite frontend. The script prints the **App URL** and **Backend API** to use; the Vite dev server will show the same port so you always open the correct URL.
+- If you set `PUBLIC_URL_FOR_OAUTH_CALLBACK` (and `NGROK_AUTHTOKEN`) in `server/.env`, the stack will also start an **ngrok** container that exposes the backend at that URL (for Slack OAuth callback). Set it to your ngrok URL (e.g. `https://your-subdomain.ngrok-free.app`); `SLACK_REDIRECT_URI` is then set to `{that}/api/slack/oauth/callback` automatically.
 
 You can also run it detached:
 

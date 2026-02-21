@@ -22,9 +22,23 @@ user_refresh_lock = Lock()
 SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
 SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_REDIRECT_URI = os.getenv("SLACK_REDIRECT_URI")
+PUBLIC_URL_FOR_OAUTH_CALLBACK = os.getenv("PUBLIC_URL_FOR_OAUTH_CALLBACK")
+NGROK_URL = (os.getenv("NGROK_URL") or "").strip()
+if not SLACK_REDIRECT_URI and PUBLIC_URL_FOR_OAUTH_CALLBACK:
+    base = PUBLIC_URL_FOR_OAUTH_CALLBACK.rstrip("/")
+    SLACK_REDIRECT_URI = f"{base}/api/slack/oauth/callback"
+if not SLACK_REDIRECT_URI and NGROK_URL:
+    base = NGROK_URL if NGROK_URL.startswith("http") else f"https://{NGROK_URL}"
+    SLACK_REDIRECT_URI = f"{base.rstrip('/')}/api/slack/oauth/callback"
 SLACK_USER_SCOPES = os.getenv("SLACK_USER_SCOPES")
 
-# Initialize the AuthorizeUrlGenerator
+
+def get_slack_redirect_uri():
+    """Return redirect URI (from env: SLACK_REDIRECT_URI, PUBLIC_URL_FOR_OAUTH_CALLBACK, or NGROK_URL)."""
+    return SLACK_REDIRECT_URI
+
+
+# Initialize the AuthorizeUrlGenerator (redirect_uri passed per-request when generating URL)
 authorize_url_generator = AuthorizeUrlGenerator(
     client_id=SLACK_CLIENT_ID,
     user_scopes=[SLACK_USER_SCOPES]
@@ -33,7 +47,12 @@ authorize_url_generator = AuthorizeUrlGenerator(
 def get_slack_oauth_url(user):
     """
     Generate Slack OAuth URL using slack_sdk, save state to user's SlackIntegration.
+    Uses env SLACK_REDIRECT_URI or live ngrok tunnel URL when running with ngrok container.
     """
+    redirect_uri = get_slack_redirect_uri()
+    if not redirect_uri:
+        raise ValueError("Slack OAuth redirect URI not set. Set SLACK_REDIRECT_URI or PUBLIC_URL_FOR_OAUTH_CALLBACK, or run with ngrok.")
+
     # Generate a unique state
     state = str(uuid.uuid4())
     # Store state and expiration in user's SlackIntegration
@@ -48,8 +67,13 @@ def get_slack_oauth_url(user):
     user.thirdPartyIntegrations['slack'] = slack_integration
     user.save()
 
-    # Generate the auth URL
-    url = authorize_url_generator.generate(state)
+    # Generate the auth URL with current redirect_uri (env or ngrok)
+    generator = AuthorizeUrlGenerator(
+        client_id=SLACK_CLIENT_ID,
+        redirect_uri=redirect_uri,
+        user_scopes=[SLACK_USER_SCOPES],
+    )
+    url = generator.generate(state)
     return url
 
 def slack_oauth_callback(code):
@@ -60,10 +84,13 @@ def slack_oauth_callback(code):
         client = WebClient()  # No prepared token needed for this
         try:
             # Complete the installation by calling oauth.v2.access API method
+            redirect_uri = get_slack_redirect_uri()
+            if not redirect_uri:
+                return {"error": "Slack redirect URI not configured"}, 400
             oauth_response = client.oauth_v2_access(
                 client_id=SLACK_CLIENT_ID,
                 client_secret=SLACK_CLIENT_SECRET,
-                redirect_uri=SLACK_REDIRECT_URI,
+                redirect_uri=redirect_uri,
                 code=code
             )
             installed_enterprise = oauth_response.get("enterprise") or {}

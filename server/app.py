@@ -44,8 +44,9 @@ connect(
 
 jwt = JWTManager(app)
 
-# Updated CORS configuration
-CORS(app, supports_credentials=True, origins=[FRONTEND_URL])
+# CORS: allow FRONTEND_URL only (set by Docker or server/.env)
+CORS(app, supports_credentials=True, origins=[FRONTEND_URL] if FRONTEND_URL else [])
+
 
 # Token blacklist set
 jwt_blocklist = set()

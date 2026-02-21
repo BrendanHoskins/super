@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import request, redirect, jsonify
+from flask import request, redirect, jsonify, current_app
 from models.user.user import User
 from models.user.slack_integration import SlackIntegration
 from services.slack.slack_oauth_services import (
@@ -41,6 +41,7 @@ def slack_oauth_callback_route():
     """
     Slack OAuth callback endpoint.
     """
+    current_app.logger.info("Slack OAuth callback hit: Origin=%s", request.headers.get("Origin"))
     code = request.args.get("code")
     state = request.args.get("state")
     error = request.args.get("error")

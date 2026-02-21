@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getAccessToken, refreshAccessToken, clearAccessToken } from '../services/AuthService';
 
 const API = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL, // Use REACT_APP_ prefix
+  baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true, // Allow Axios to send HttpOnly cookies
 });
 
