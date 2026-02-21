@@ -69,7 +69,8 @@ fi
 
 docker compose logs -f $log_services 2>/dev/null | while IFS= read -r line; do
   echo "$line"
-  [[ "$line" == *"Backend URL (from your machine)"* ]] && backend_ready=1
+  # Backend ready when Flask has finished startup ("Serving Flask app" + "Debug mode")
+  [[ "$line" == *"super-server"* ]] && [[ "$line" == *"Debug mode"* ]] && backend_ready=1
   [[ "$line" == *"super-client"* ]] && [[ "$line" == *"Local:"* ]] && frontend_ready=1
   if [ "$backend_ready" -eq 1 ] && [ "$frontend_ready" -eq 1 ] && [ "$summary_done" -eq 0 ]; then
     summary_done=1
