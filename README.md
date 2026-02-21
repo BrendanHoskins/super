@@ -172,19 +172,18 @@ super/
 
 ### Environment Variables
 
-Create env files from the provided examples and fill in your Slack details:
-
-- Copy `server/.env.example` to `server/.env` and update the Slack and JWT values.
-- Copy `client/.env.example` to `client/.env` if you want to override the default backend URL.
+One env file at the repo root. Create it from the example and fill in your Slack and JWT values:
 
 ```bash
-cp server/.env.example server/.env
-cp client/.env.example client/.env
+cp .env.example .env
+# Edit .env with your secrets
 ```
+
+(`make docker-super` will create `.env` from `.env.example` automatically if `.env` is missing.)
 
 ### Running with Docker (recommended)
 
-Once your `.env` files are populated:
+Once `.env` at the repo root is populated:
 
 ```bash
 make docker-super
@@ -193,7 +192,7 @@ make docker-super
 This will:
 
 - **Scan for open ports** for the backend (from 5000) and frontend (from 3000), then start MongoDB, Flask backend, and Vite frontend. The script prints the **App URL** and **Backend API** to use; the Vite dev server will show the same port so you always open the correct URL.
-- If you set `PUBLIC_URL_FOR_OAUTH_CALLBACK` (and `NGROK_AUTHTOKEN`) in `server/.env`, the stack will also start an **ngrok** container that exposes the backend at that URL (for Slack OAuth callback). Set it to your ngrok URL (e.g. `https://your-subdomain.ngrok-free.app`); `SLACK_REDIRECT_URI` is then set to `{that}/api/slack/oauth/callback` automatically.
+- If you set `NGROK_URL` and `NGROK_AUTHTOKEN` in `.env`, the stack will also start an **ngrok** container that exposes the backend at your static ngrok domain (for Slack OAuth). The redirect URI is set to `https://{NGROK_URL}/api/slack/oauth/callback` automatically.
 
 You can also run it detached:
 

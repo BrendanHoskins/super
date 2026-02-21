@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-# Load server/.env for NGROK_*, PUBLIC_URL_FOR_OAUTH_CALLBACK, etc.
-if [ -f server/.env ]; then
+# .env at repo root (required for compose server env_file). Create from .env.example if missing.
+if [ ! -f .env ] && [ -f .env.example ]; then
+  cp .env.example .env
+  echo "Created .env from .env.example — edit .env with your secrets."
+fi
+if [ -f .env ]; then
   set -a
   # shellcheck source=/dev/null
-  . server/.env
+  . .env
   set +a
 fi
 
@@ -19,9 +23,10 @@ find_open_port() {
 
 BACKEND_PORT=$(find_open_port 5000)
 FRONTEND_PORT=$(find_open_port 3000)
-export BACKEND_PORT FRONTEND_PORT
+MONGO_PORT=$(find_open_port 27017)
+export BACKEND_PORT FRONTEND_PORT MONGO_PORT
 
-# Free tier: one static domain (e.g. your-name.ngrok-free.app). User sets NGROK_URL and NGROK_AUTHTOKEN in server/.env.
+# Free tier: one static domain (e.g. your-name.ngrok-free.app). User sets NGROK_URL and NGROK_AUTHTOKEN in .env at repo root.
 if [ -n "$NGROK_AUTHTOKEN" ] && [ -n "$NGROK_URL" ]; then
   export NGROK_AUTHTOKEN NGROK_URL
   export COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}ngrok"
@@ -32,6 +37,7 @@ fi
 
 echo "App URL:      http://localhost:$FRONTEND_PORT"
 echo "Backend API:  http://localhost:$BACKEND_PORT/api"
+echo "Mongo:        localhost:$MONGO_PORT"
 echo ""
 
 exec docker compose up --build "$@"

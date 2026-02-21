@@ -1,5 +1,10 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Load .env from repo root first (so local runs find it); then cwd (Docker injects env, so file optional)
+_root = Path(__file__).resolve().parent.parent
+load_dotenv(_root / ".env")
 load_dotenv()
 
 from flask import Flask, jsonify, make_response
@@ -16,12 +21,12 @@ from api.auth_routes import auth_bp
 from api.integrations_routes import integrations_routes
 from api.messages_routes import messages_bp
 
-# Load environment variables
-MONGO_URI = os.getenv('MONGO_URI')
-MONGO_PROJECT_NAME = os.getenv('MONGO_PROJECT_NAME')
+# Load environment variables (Docker sets MONGO_URI, FRONTEND_URL, BACKEND_URL via port scanner)
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017')
+MONGO_PROJECT_NAME = os.getenv('MONGO_PROJECT_NAME', 'super')
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-FRONTEND_URL = os.getenv('FRONTEND_URL')
-BACKEND_URL = os.getenv('BACKEND_URL')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:5000')
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY  # Set the secret key from .env
@@ -44,7 +49,7 @@ connect(
 
 jwt = JWTManager(app)
 
-# CORS: allow FRONTEND_URL only (set by Docker or server/.env)
+# CORS: allow FRONTEND_URL only (set by Docker or .env at repo root)
 CORS(app, supports_credentials=True, origins=[FRONTEND_URL] if FRONTEND_URL else [])
 
 

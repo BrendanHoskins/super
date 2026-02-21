@@ -17,8 +17,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 from threading import Thread
 
-# Load environment variables
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+# Load environment variables (Docker sets from port scan)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 
 

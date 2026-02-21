@@ -22,11 +22,7 @@ user_refresh_lock = Lock()
 SLACK_CLIENT_ID = os.getenv("SLACK_CLIENT_ID")
 SLACK_CLIENT_SECRET = os.getenv("SLACK_CLIENT_SECRET")
 SLACK_REDIRECT_URI = os.getenv("SLACK_REDIRECT_URI")
-PUBLIC_URL_FOR_OAUTH_CALLBACK = os.getenv("PUBLIC_URL_FOR_OAUTH_CALLBACK")
 NGROK_URL = (os.getenv("NGROK_URL") or "").strip()
-if not SLACK_REDIRECT_URI and PUBLIC_URL_FOR_OAUTH_CALLBACK:
-    base = PUBLIC_URL_FOR_OAUTH_CALLBACK.rstrip("/")
-    SLACK_REDIRECT_URI = f"{base}/api/slack/oauth/callback"
 if not SLACK_REDIRECT_URI and NGROK_URL:
     base = NGROK_URL if NGROK_URL.startswith("http") else f"https://{NGROK_URL}"
     SLACK_REDIRECT_URI = f"{base.rstrip('/')}/api/slack/oauth/callback"
@@ -34,7 +30,7 @@ SLACK_USER_SCOPES = os.getenv("SLACK_USER_SCOPES")
 
 
 def get_slack_redirect_uri():
-    """Return redirect URI (from env: SLACK_REDIRECT_URI, PUBLIC_URL_FOR_OAUTH_CALLBACK, or NGROK_URL)."""
+    """Return redirect URI (from env: SLACK_REDIRECT_URI or derived from NGROK_URL)."""
     return SLACK_REDIRECT_URI
 
 
@@ -51,7 +47,7 @@ def get_slack_oauth_url(user):
     """
     redirect_uri = get_slack_redirect_uri()
     if not redirect_uri:
-        raise ValueError("Slack OAuth redirect URI not set. Set SLACK_REDIRECT_URI or PUBLIC_URL_FOR_OAUTH_CALLBACK, or run with ngrok.")
+        raise ValueError("Slack OAuth redirect URI not set. Set SLACK_REDIRECT_URI or NGROK_URL in .env at repo root.")
 
     # Generate a unique state
     state = str(uuid.uuid4())

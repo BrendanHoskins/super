@@ -336,7 +336,7 @@ function SlackTabContent() {
         <Box display="flex" alignItems="center">
           <InfoIcon color="primary" sx={{ mr: 2 }} />
           <Typography variant="body1">
-            Super will pull a Slack message when a selected user tags a message with a selected emoji. (Note: only applies to channels and conversations you are a part of)
+            Super will pull a Slack message when a selected user tags a message with a selected emoji.
           </Typography>
         </Box>
       </Paper>
