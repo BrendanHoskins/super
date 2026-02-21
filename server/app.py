@@ -31,8 +31,6 @@ MONGO_PROJECT_NAME = os.getenv('MONGO_PROJECT_NAME', 'super')
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:5000')
-if BACKEND_URL:
-    print("Backend URL (from your machine):", BACKEND_URL)
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY  # Set the secret key from .env
