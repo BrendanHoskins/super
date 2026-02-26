@@ -66,7 +66,19 @@ function IntegrationsPage() {
   const handleDisconnectSlack = async () => {
     try {
       await API.post("/slack/oauth/uninstall");
-      fetchIntegrations();
+
+      // Optimistically update Slack integration state so the UI updates immediately
+      setIntegrations((prev) => {
+        const prevSlack = prev.slack || {};
+        return {
+          ...prev,
+          slack: {
+            ...prevSlack,
+            enabled: false,
+            installation: null,
+          },
+        };
+      });
     } catch (error) {
       console.error("Error disconnecting Slack:", error);
     }
