@@ -5,6 +5,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from .slack_oauth_services import get_user_refresh_token
 from bson import ObjectId
+from services.sse_hub import broadcast as sse_broadcast
 
 def process_slack_event(event_data):
     event = event_data.get('event')
@@ -63,7 +64,7 @@ def process_slack_event(event_data):
                         # Remove the message for this user
                         remove_message_for_user(user, event)
                     else:
-                        # Handle new messages if needed
+                        # Only show messages tagged with selected emoji (reaction_added), not plain new messages
                         pass
             # Handle other event types if necessary
 
@@ -204,6 +205,7 @@ def save_message_for_user(user, event):
         slack_message.populate_from_slack_message(message, user_info)
         slack_message.save()
         print(f"Message saved for user {user.id} with ObjectId: {new_object_id}")
+        sse_broadcast(str(user.id), 'message_created', slack_message.to_dict())
 
     except SlackApiError as e:
         print(f"Error fetching message: {e}")
@@ -235,11 +237,11 @@ def remove_message_for_user(user, event):
         message = SlackMessage.objects(relevant_user_id=user.id, message_id=message_id).first()
         
         if message:
-            
+            payload = message.to_dict()
             # Delete the message from the database
             message.delete()
             print(f"Message {message_id} deleted from database for user {user.id}")
-            
+            sse_broadcast(str(user.id), 'message_removed', payload)
         else:
             print(f"No message found with id {message_id} for user {user.id}")
     except Exception as e:
@@ -283,6 +285,7 @@ def update_message_for_user(user, event):
         slack_message.populate_from_slack_message(message)
         slack_message.save()
         print(f"Message {message_id} updated for user {user.id}")
+        sse_broadcast(str(user.id), 'message_updated', slack_message.to_dict())
 
     except SlackApiError as e:
         print(f"Error updating message: {e}")

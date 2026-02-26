@@ -34,7 +34,7 @@ BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:5000')
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY  # Set the secret key from .env
-app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies', 'query_string']
 app.config['JWT_ACCESS_COOKIE_NAME'] = 'access_token_cookie'
 app.config['JWT_REFRESH_COOKIE_NAME'] = 'refresh_token_cookie'
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False  # For simplicity; consider enabling in production
@@ -44,6 +44,7 @@ app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=90)  # Gmail-style: sta
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # 24h so leaving tab open and returning doesn't require refresh
 app.config['JWT_SESSION_COOKIE'] = False  # Persist refresh cookie with max_age so it survives tab/background and isn't lost
 app.config['JWT_REFRESH_COOKIE_PATH'] = '/'  # Ensure refresh cookie is sent for all backend paths
+app.config['JWT_QUERY_STRING_NAME'] = 'access_token'  # For SSE /stream (EventSource cannot send headers)
 
 # Initialize MongoDB connection using mongoengine
 connect(
