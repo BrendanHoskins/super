@@ -168,7 +168,50 @@ super/
 - Python 3.8+
 - Node.js 16+
 - MongoDB instance
-- Slack App credentials (Client ID, Client Secret, Signing Secret)
+- Slack App ([create one at api.slack.com/apps](https://api.slack.com/apps))
+
+### Configuring the Slack App
+
+After creating your app, configure the following in the [Slack API dashboard](https://api.slack.com/apps) so the server can receive events and complete OAuth. Use your **ngrok URL** (e.g. `https://your-name.ngrok-free.app`) as the base for all URLs below.
+
+#### 1. Event Subscriptions
+
+Under **Features → Event Subscriptions**:
+
+- **Enable Events**: Turn On.
+- **Request URL**:  
+  `https://<your-ngrok-url>/api/slack/events/webhooks`  
+  (e.g. `https://your-name.ngrok-free.app/api/slack/events/webhooks`).  
+  Slack will send a verification request to this URL; the server responds with the challenge to verify.
+- **Subscribe to bot events** (and/or **Subscribe to workspace events** as needed): add at least:
+  - `message.channels` – messages in public channels
+  - `message.groups` – messages in private channels
+  - `message.im` – direct messages
+  - `message.mpim` – group DMs
+  - `reaction_added` – when an emoji reaction is added
+  - `reaction_removed` – when an emoji reaction is removed  
+
+  These align with the app’s filtering (messages and reactions).
+
+#### 2. OAuth & Permissions
+
+Under **Features → OAuth & Permissions**:
+
+- **Redirect URLs**: Add:  
+  `https://<your-ngrok-url>/api/slack/oauth/callback`  
+  (e.g. `https://your-name.ngrok-free.app/api/slack/oauth/callback`).  
+  This must match the URL your backend uses (the app derives it from `NGROK_URL` or `SLACK_REDIRECT_URI` in `.env`).
+- **User Token Scopes** (OAuth flow): Add the scopes your app needs. The example `.env` uses:
+  - `emoji:read` – list emojis for filter configuration
+  - `users:read` – list workspace users for member filters
+  - `users:read.email` – user email (if needed)
+  - `usergroups:read` – user groups
+  - `channels:history`, `groups:history`, `im:history`, `mpim:history` – read message history in channels, private channels, DMs, and group DMs
+  - `reactions:read` – read reactions on messages  
+
+  Set the same comma-separated list in `.env` as `SLACK_USER_SCOPES`.
+
+After changing Event Subscriptions or Redirect URLs, reinstall the app to your workspace if prompted.
 
 ### Environment Variables
 
