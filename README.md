@@ -183,7 +183,7 @@ Under **Features → Event Subscriptions**:
   `https://<your-ngrok-url>/api/slack/events/webhooks`  
   (e.g. `https://your-name.ngrok-free.app/api/slack/events/webhooks`).  
   Slack will send a verification request to this URL; the server responds with the challenge to verify.
-- **Subscribe to bot events** (and/or **Subscribe to workspace events** as needed): add at least:
+- **Subscribe to workspace events**: add at least:
   - `message.channels` – messages in public channels
   - `message.groups` – messages in private channels
   - `message.im` – direct messages
@@ -195,7 +195,7 @@ Under **Features → Event Subscriptions**:
 
 #### 2. OAuth & Permissions
 
-Under **Features → OAuth & Permissions**:
+Under **Features → OAuth & Permissions** (only **user** scopes are needed; no bot scopes):
 
 - **Redirect URLs**: Add:  
   `https://<your-ngrok-url>/api/slack/oauth/callback`  
@@ -250,98 +250,3 @@ To force specific ports instead of auto-selecting:
 ```bash
 BACKEND_PORT=5001 FRONTEND_PORT=3001 make docker-super
 ```
-
-**View what’s using a port (macOS/Linux):**
-
-```bash
-lsof -i :5000
-```
-
-**Kill the process using a port:**
-
-```bash
-kill -9 $(lsof -ti :5000)
-```
-
-Replace `5000` with the port you care about. Use `sudo` if the process is owned by another user.
-
-### Manual Installation (without Docker)
-
-#### Backend
-
-```bash
-cd server
-pip install -r requirements.txt
-python app.py
-```
-
-#### Frontend
-
-```bash
-cd client
-npm install
-npm start
-```
-
-The application will be available at `http://localhost:3000`.
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login and receive access token
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout and invalidate tokens
-
-### Integrations
-
-- `GET /api/integrations/connected-integrations` - Get user's connected integrations
-- `POST /api/slack/oauth/install` - Initiate Slack OAuth flow
-- `POST /api/slack/oauth/uninstall` - Disconnect Slack integration
-
-### Messages
-
-- `GET /api/messages/get-messages` - Get filtered messages for authenticated user
-
-### Slack Webhooks
-
-- `POST /api/slack/events/webhooks` - Receive Slack event webhooks
-
-## Development
-
-### Running Tests
-
-```bash
-# Backend
-cd server
-python -m pytest
-
-# Frontend
-cd client
-npm test
-```
-
-### Code Style
-
-- Python: Follow PEP 8 guidelines
-- JavaScript: ESLint configuration extends `react-app` preset
-
-## Security Considerations
-
-- **CSRF Protection**: Currently disabled for development (`JWT_COOKIE_CSRF_PROTECT = False`). Enable in production.
-- **HTTPS**: Set `JWT_COOKIE_SECURE = True` in production to ensure cookies are only sent over HTTPS
-- **Token Expiration**: Access tokens are short-lived; refresh tokens expire after 30 days
-- **Webhook Verification**: All Slack webhooks are verified using signature verification
-
-## Future Enhancements
-
-- Additional third-party integrations (Teams, Discord, etc.)
-- Advanced filtering options (keywords, channels, time ranges)
-- Message analytics and insights
-- Real-time notifications
-- Message search and export functionality
-
-## License
-
-[Your License Here]
